@@ -52,6 +52,12 @@ RUN apt-get install -y nodejs \
 # Cleanup
 RUN rm -rf /var/lib/apt/lists/*
 
+# Use tini as subreaper in Docker container to adopt zombie processes
+ENV TINI_SHA 066ad710107dc7ee05d3aa6e4974f01dc98f3888
+RUN curl -fL https://github.com/krallin/tini/releases/download/v0.5.0/tini-static -o /bin/tini && chmod +x /bin/tini \
+  && echo "$TINI_SHA /bin/tini" | sha1sum -c -
+
+
 # Install RVM
 ENV RUBY_HOME /ruby_home
 RUN useradd -u 1000 -d ${RUBY_HOME} -m -s /bin/bash ruby
@@ -61,3 +67,5 @@ RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A170311380
   && curl -sSL https://get.rvm.io | bash -s stable
 
 ADD install_ruby.sh ${RUBY_HOME}/
+
+ENTRYPOINT ["/bin/tini", "--"]
