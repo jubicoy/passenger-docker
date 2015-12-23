@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 FROM debian:jessie
+MAINTAINER Vilppu Vuorinen "vilppu.vuorinen@jubic.fi"
+
+ADD apt/unstable.pref /etc/apt/preferences.d/unstable.pref
+ADD apt/unstable.list /etc/apt/sources.list.d/unstable.list
 
 # Base deps
 RUN apt-get update \
@@ -36,7 +40,8 @@ RUN apt-get update \
     bison \
     pkg-config \
     libffi-dev \
-    gettext
+    gettext \
+  && apt-get install -y -t unstable libnss-wrapper
 
 # Install Passenger
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7 \
@@ -52,20 +57,23 @@ RUN apt-get install -y nodejs \
 # Cleanup
 RUN rm -rf /var/lib/apt/lists/*
 
-# Use tini as subreaper in Docker container to adopt zombie processes
+# Install tini
 ENV TINI_SHA 066ad710107dc7ee05d3aa6e4974f01dc98f3888
 RUN curl -fL https://github.com/krallin/tini/releases/download/v0.5.0/tini-static -o /bin/tini && chmod +x /bin/tini \
   && echo "$TINI_SHA /bin/tini" | sha1sum -c -
 
+# Setup NSS wrapper
+ENV RUBY_HOME /ruby_home
+RUN useradd -u 1001 -d ${RUBY_HOME} -m -s /bin/bash ruby
+RUN mkdir -p "${RUBY_HOME}/nsswrap"
+ADD passwd.template "${RUBY_HOME}/nsswrap/passwd.template"
+USER ruby
 
 # Install RVM
-ENV RUBY_HOME /ruby_home
-RUN useradd -u 1000 -d ${RUBY_HOME} -m -s /bin/bash ruby
-
-USER ruby
 RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 \
   && curl -sSL https://get.rvm.io | bash -s stable
 
 ADD install_ruby.sh ${RUBY_HOME}/
+ADD entrypoint.sh ${RUBY_HOME}/entrypoint.sh
 
-ENTRYPOINT ["/bin/tini", "--"]
+ENTRYPOINT ["/bin/tini", "--", "/ruby_home/entrypoint.sh"]
