@@ -21,4 +21,5 @@ fi
   && /bin/bash -l -c "rvm install ruby-${RUBY_VERSION}" \
   && /bin/bash -l -c "rvm --default use ruby-${RUBY_VERSION}" \
   && /bin/bash -l -c "gem install bundler --no-rdoc --no-ri" \
-  && passenger-config build-native-support
+  && passenger-config build-native-support \
+  || cat /ruby_home/.rvm/log/*/make.log

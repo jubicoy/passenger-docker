@@ -31,7 +31,7 @@ baseimage:
 		&& docker build $(OPTS) -t $(BASE_IMAGE_NAME) . \
 		&& popd
 
-container: baseimage
+image: baseimage
 ifndef VERSION
 	$(error RUBY not set or invalid)
 endif

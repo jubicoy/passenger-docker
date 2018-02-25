@@ -11,51 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM debian:jessie
-MAINTAINER Vilppu Vuorinen "vilppu.vuorinen@jubic.fi"
+FROM debian:stretch-slim
 
-ADD apt/unstable.pref /etc/apt/preferences.d/unstable.pref
-ADD apt/unstable.list /etc/apt/sources.list.d/unstable.list
-
-# Base deps
-RUN apt-get update \
+# Install base deps and Passenger
+RUN  apt-get update \
   && apt-get install -y \
-    curl \
     apt-transport-https \
-    ca-certificates \
-    build-essential \
-    gawk \
-    libreadline6-dev \
-    zlib1g-dev \
-    libssl-dev \
-    libyaml-dev \
-    libsqlite3-dev \
-    libpq-dev \
-    libmysqlclient-dev \
     autoconf \
-    libgdbm-dev \
-    libncurses5-dev \
     automake \
-    libtool \
     bison \
-    pkg-config \
-    libffi-dev \
+    build-essential \
+    ca-certificates \
+    curl \
+    gawk \
     gettext \
-  && apt-get install -y -t unstable libnss-wrapper
-
-# Install Passenger
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7 \
-  && echo deb https://oss-binaries.phusionpassenger.com/apt/passenger jessie main > /etc/apt/sources.list.d/passenger.list \
+    gnupg \
+    libffi-dev \
+    libgdbm-dev \
+    default-libmysqlclient-dev \
+    libncurses5-dev \
+    libnss-wrapper \
+    libpq-dev \
+    libreadline6-dev \
+    libsqlite3-dev \
+    libssl1.0-dev \
+    libyaml-dev \
+    libtool \
+    nodejs \
+    passenger \
+    pkg-config \
+    zlib1g-dev \
+  && ln -sf /usr/bin/nodejs /usr/local/bin/node \
+  && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7 \
+  && echo deb https://oss-binaries.phusionpassenger.com/apt/passenger stretch main > /etc/apt/sources.list.d/passenger.list \
   && apt-get update \
   && apt-get install -y passenger \
-  && passenger-config validate-install
-
-# Install NodeJS (some legacy version I presume)
-RUN apt-get install -y nodejs \
-  && ln -sf /usr/bin/nodejs /usr/local/bin/node
-
-# Cleanup
-RUN rm -rf /var/lib/apt/lists/*
+  && passenger-config validate-install \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install tini
 ENV TINI_SHA 066ad710107dc7ee05d3aa6e4974f01dc98f3888
@@ -64,13 +56,21 @@ RUN curl -fL https://github.com/krallin/tini/releases/download/v0.5.0/tini-stati
 
 # Setup NSS wrapper
 ENV RUBY_HOME /ruby_home
-RUN useradd -u 1001 -d ${RUBY_HOME} -m -s /bin/bash ruby
-RUN mkdir -p "${RUBY_HOME}/nsswrap"
+RUN useradd -u 1001 -d ${RUBY_HOME} -m -s /bin/bash ruby \
+  && mkdir -p "${RUBY_HOME}/nsswrap"
 ADD passwd.template "${RUBY_HOME}/nsswrap/passwd.template"
 USER ruby
 
 # Install RVM
-RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 \
+RUN set -ex \
+  && for key in \
+    409B6B1796C275462A1703113804BB82D39DC0E3 \
+    7D2BAF1CF37B13E2069D6956105BD0E739499BDB \
+  ; do \
+    gpg --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys "$key" || \
+    gpg --keyserver hkp://ipv4.pool.sks-keyservers.net --recv-keys "$key" || \
+    gpg --keyserver hkp://pgp.mit.edu:80 --recv-keys "$key" ; \
+  done \
   && curl -sSL https://get.rvm.io | bash -s stable
 
 ADD install_ruby.sh ${RUBY_HOME}/
