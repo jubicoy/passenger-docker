@@ -11,35 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+FROM jubicoy/passenger-base
 
-SHELL := /bin/bash
+ENV RUBY_VERSION 2.4
+RUN ${RUBY_HOME}/install_ruby.sh
 
-ifeq ($(RUBY),2.4)
-	VERSION := ruby-2.4
-else ifeq ($(RUBY),2.2)
-	VERSION := ruby-2.2
-else ifeq ($(RUBY),2.1)
-	VERSION := ruby-2.1
-endif
-ifdef NOCACHE
-	OPTS := --no-cache
-endif
-
-IMAGE_NAME := jubicoy/passenger
-BASE_IMAGE_NAME := $(IMAGE_NAME)-base
-
-baseimage:
-	pushd common \
-		&& docker build $(OPTS) -t $(BASE_IMAGE_NAME) . \
-		&& popd
-
-image: baseimage
-ifndef VERSION
-	$(error RUBY not set or invalid)
-endif
-	pushd $(VERSION) \
-		&& docker build $(OPTS) -t $(IMAGE_NAME):$(VERSION) . \
-		&& popd
-
-push:
-	docker push $(IMAGE_NAME):$(VERSION)

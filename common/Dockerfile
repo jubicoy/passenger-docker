@@ -28,6 +28,9 @@ RUN  apt-get update \
     gnupg \
     libffi-dev \
     libgdbm-dev \
+    libgmp10 \
+    imagemagick \
+    libmagickwand-dev \
     default-libmysqlclient-dev \
     libncurses5-dev \
     libnss-wrapper \
